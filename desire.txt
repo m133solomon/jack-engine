@@ -1,0 +1,44 @@
+jack engine
+personal use
+for game jams
+similar api to p5.js / processing
+
+open gl rendering
+glfw3 glew
+
+simple api
+will work like a state machine
+no namespace -> functions like "draw_texture() push_state() shader_new()" etc
+basic game loop -> update / draw
+vsync
+
+window handling
+audio
+input
+
+big boi multithreading
+
+colors
+shapes: fill - stroke
+transformations: push - pop - translate - rotate - scale
+texture rendering
+text rendering: ttf support
+shaders
+z sorting / layers ??
+decals ????
+3d sprite rendering - to be decided
+batch rendering?
+texture atlases?
+render targets
+
+spritesheet animation
+camera
+scenes
+ecs / node system (to be decided)
+sprite
+tweens
+basic collisions
+
+window / macos / linux export support
+
+! get a gf !

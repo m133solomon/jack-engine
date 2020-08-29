@@ -1,0 +1,7 @@
+[
+    {
+        "directory": "/Users/mihaisolomon/Documents/Projects/C_Jack",
+        "command": "clang main.c -o main -I/usr/local/include",
+        "file": "main.c"
+    }
+]
