@@ -1,5 +1,6 @@
 #include "renderer.h"
 #include "cglm/affine.h"
+#include "cglm/mat4.h"
 #include "log.h"
 #include <stdint.h>
 #include <stdlib.h>
@@ -164,7 +165,7 @@ void renderer_textured_quad(texture *tex, vec4 tint, vec2 translation, vec2 scal
 
 // --- BATCH RENDERER ---
 
-static const uint32_t MAX_QUAD_COUNT = 40000;
+static const uint32_t MAX_QUAD_COUNT = 10000;
 static const uint32_t MAX_VERTEX_COUNT = MAX_QUAD_COUNT * 4;
 static const uint32_t MAX_INDEX_COUNT = MAX_QUAD_COUNT * 6;
 static int MAX_TEXTURES;
@@ -179,6 +180,9 @@ typedef struct
 
 typedef struct
 {
+    vec3 quad_vertex_positions[4];
+    vec2 quad_texture_coords[4];
+
     GLuint quad_va;
     GLuint quad_vb;
     GLuint quad_ib;
@@ -198,18 +202,54 @@ typedef struct
 static batch_renderer_data renderer_data;
 static void init_renderer_data()
 {
+    // init vertex positions
+    glm_vec3_copy(
+        (vec3) { -0.5f, -0.5f, 0.0f },
+        renderer_data.quad_vertex_positions[0]
+    );
+    glm_vec3_copy(
+        (vec3) { 0.5f, -0.5f, 0.0f },
+        renderer_data.quad_vertex_positions[1]
+    );
+    glm_vec3_copy(
+        (vec3) { 0.5f, 0.5f, 0.0f },
+        renderer_data.quad_vertex_positions[2]
+    );
+    glm_vec3_copy(
+        (vec3) { -0.5f, 0.5f, 0.0f },
+        renderer_data.quad_vertex_positions[3]
+    );
+
+    // init texture coords
+    glm_vec2_copy(
+        (vec2) { 0.0f, 0.0f },
+        renderer_data.quad_texture_coords[0]
+    );
+    glm_vec2_copy(
+        (vec2) { 1.0f, 0.0f },
+        renderer_data.quad_texture_coords[1]
+    );
+    glm_vec2_copy(
+        (vec2) { 1.0f, 1.0f },
+        renderer_data.quad_texture_coords[2]
+    );
+    glm_vec2_copy(
+        (vec2) { 0.0f, 1.0f },
+        renderer_data.quad_texture_coords[3]
+    );
+
     renderer_data.quad_va = 0;
     renderer_data.quad_vb = 0;
     renderer_data.quad_ib = 0;
     renderer_data.white_texture = 0;
     renderer_data.white_texture_slot = 0;
 
+    renderer_data.index_count = 0;
+
     renderer_data.quad_buffer = (vertex*)malloc(sizeof(vertex) * MAX_VERTEX_COUNT);
 
-    renderer_data.index_count = 0;
-    renderer_data.texture_slot_index = 0;
-
     renderer_data.texture_slots = (uint32_t*)malloc(MAX_TEXTURES * sizeof(uint32_t));
+    renderer_data.texture_slot_index = 0;
 }
 
 void batch_renderer_init()
@@ -333,71 +373,35 @@ void batch_renderer_flush()
     renderer_data.texture_slot_index = 1;
 }
 
-static void batch_renderer_bind_data(vec2 position, vec2 size, vec4 color, float texture_index)
+static void batch_renderer_bind_data(vec2 position, vec2 size, float rotation, vec4 color, float texture_index)
 {
-    // vertex 1
+    mat4 transform;
+    glm_mat4_identity(transform);
+    glm_translate(transform, (vec3) { position[0], position[1], 0.0f });
+    glm_scale(transform, (vec3) { size[0], size[1], 0.0f });
+    glm_rotate_z(transform, rotation, transform);
 
-    glm_vec3_copy((vec3) { position[0], position[1], 0.0f },renderer_data.quad_buffer_ptr->position);
-    glm_vec4_copy(color, renderer_data.quad_buffer_ptr->color);
-    glm_vec2_copy(
-        (vec2) { 0.0f, 0.0f },
-        renderer_data.quad_buffer_ptr->tex_coords
-    );
-    renderer_data.quad_buffer_ptr->tex_index = texture_index;
-    renderer_data.quad_buffer_ptr++;
-
-    // vertex 2
-    glm_vec3_copy(
-        (vec3) { position[0] + size[0], position[1], 0.0f },
-        renderer_data.quad_buffer_ptr->position
-    );
-    glm_vec4_copy(
-        color,
-        renderer_data.quad_buffer_ptr->color
-    );
-    glm_vec2_copy(
-        (vec2) { 1.0f, 0.0f },
-        renderer_data.quad_buffer_ptr->tex_coords
-    );
-    renderer_data.quad_buffer_ptr->tex_index = texture_index;
-    renderer_data.quad_buffer_ptr++;
-
-    // vertex 3
-    glm_vec3_copy(
-        (vec3) { position[0] + size[0], position[1] + size[1], 0.0f },
-        renderer_data.quad_buffer_ptr->position
-    );
-    glm_vec4_copy(
-        color,
-        renderer_data.quad_buffer_ptr->color
-    );
-    glm_vec2_copy(
-        (vec2) { 1.0f, 1.0f },
-        renderer_data.quad_buffer_ptr->tex_coords
-    );
-    renderer_data.quad_buffer_ptr->tex_index = texture_index;
-    renderer_data.quad_buffer_ptr++;
-
-    // vertex 4
-    glm_vec3_copy(
-        (vec3) { position[0], position[1] + size[1], 0.0f },
-        renderer_data.quad_buffer_ptr->position
-    );
-    glm_vec4_copy(
-        color,
-        renderer_data.quad_buffer_ptr->color
-    );
-    glm_vec2_copy(
-        (vec2) { 0.0f, 1.0f },
-        renderer_data.quad_buffer_ptr->tex_coords
-    );
-    renderer_data.quad_buffer_ptr->tex_index = texture_index;
-    renderer_data.quad_buffer_ptr++;
-
+    // 4 vertices
+    for (int i = 0; i < 4; i++)
+    {
+        vec3 position;
+        glm_mat4_mulv3(transform, renderer_data.quad_vertex_positions[i], 1.0f, position);
+        glm_vec3_copy(
+            position,
+            renderer_data.quad_buffer_ptr->position
+        );
+        glm_vec4_copy(color, renderer_data.quad_buffer_ptr->color);
+        glm_vec2_copy(
+            renderer_data.quad_texture_coords[i],
+            renderer_data.quad_buffer_ptr->tex_coords
+        );
+        renderer_data.quad_buffer_ptr->tex_index = texture_index;
+        renderer_data.quad_buffer_ptr++;
+    }
     renderer_data.index_count += 6;
 }
 
-void batch_renderer_fill_quad(vec2 position, vec2 size, vec4 color)
+void batch_renderer_fill_quad(vec2 position, vec2 size, float rotation, vec4 color)
 {
     if (renderer_data.index_count >= MAX_INDEX_COUNT)
     {
@@ -407,13 +411,13 @@ void batch_renderer_fill_quad(vec2 position, vec2 size, vec4 color)
     }
 
     float texture_index = 0.0f;
-    batch_renderer_bind_data(position, size, color, texture_index);
+    batch_renderer_bind_data(position, size, rotation, color, texture_index);
 }
 
-void batch_renderer_textured_quad(vec2 position, vec2 size, uint32_t texture_id)
+void batch_renderer_textured_quad(vec2 position, vec2 size, float rotation, uint32_t texture_id)
 {
     if (
-        renderer_data.index_count > MAX_INDEX_COUNT ||
+        renderer_data.index_count >= MAX_INDEX_COUNT ||
         renderer_data.texture_slot_index > MAX_TEXTURES - 1
     )
     {
@@ -442,7 +446,7 @@ void batch_renderer_textured_quad(vec2 position, vec2 size, uint32_t texture_id)
         renderer_data.texture_slot_index++;
     }
 
-    batch_renderer_bind_data(position, size, color, texture_index);
+    batch_renderer_bind_data(position, size, rotation, color, texture_index);
 }
 
 void renderer_clean()

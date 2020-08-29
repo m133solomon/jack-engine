@@ -27,7 +27,7 @@ shaders
 z sorting / layers ??
 decals ????
 3d sprite rendering - to be decided
-batch rendering?
+batch rendering
 texture atlases?
 render targets
 
@@ -39,6 +39,6 @@ sprite
 tweens
 basic collisions
 
-window / macos / linux export support
+windows / macos / linux export support
 
 ! get a gf !

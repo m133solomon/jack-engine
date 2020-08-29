@@ -1,5 +1,6 @@
 #include "src/jack.h"
 #include "src/renderer.h"
+#include "math.h"
 
 void loop(float delta_time);
 void init();
@@ -74,7 +75,7 @@ void camera_controller(float delta_time)
 int quadCount = 0;
 void loop(float delta_time)
 {
-    j_clear(J_GRAY);
+    j_clear(J_BLACK);
 
     camera_controller(delta_time);
 
@@ -119,14 +120,14 @@ void draw_batch()
     quadCount = 0;
 
     int t_indx = 0;
-    for (float y = -2000.0f; y < 2000.0f; y += 20.0f)
+    for (float y = -2000.0f; y < 2000.0f; y += 30.0f)
     {
-        for (float x = -2000.0f; x < 2000.0f; x += 20.0f)
+        for (float x = -2000.0f; x < 2000.0f; x += 30.0f)
         {
             quadCount++;
-            vec4 color = (vec4) { (x + 2000) / 4000, 0.6f, (y + 2000) / 4000, 1.0f };
-            batch_renderer_fill_quad((vec2) { x, y }, (vec2) { 20, 20 }, color);
-            /* batch_renderer_textured_quad((vec2) { x, y }, (vec2) { 18, 18 }, t.renderer_id); */
+            vec4 color = (vec4) { (x + 2000) / 4000, 0.2f, (y + 2000) / 4000, 1.0f };
+            /* batch_renderer_fill_quad((vec2) { x, y }, (vec2) { 30.0f, 30.0f }, 0, color); */
+            batch_renderer_textured_quad((vec2) { x, y }, (vec2) { 30.0f, 30.0f }, 0.0f, t.renderer_id);
         }
     }
 

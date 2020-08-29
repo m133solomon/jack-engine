@@ -50,7 +50,7 @@ void batch_renderer_begin();
 void batch_renderer_end();
 void batch_renderer_flush();
 
-void batch_renderer_fill_quad(vec2 position, vec2 size, vec4 color);
-void batch_renderer_textured_quad(vec2 position, vec2 size, uint32_t texture_id);
+void batch_renderer_fill_quad(vec2 position, vec2 size, float rotation, vec4 color);
+void batch_renderer_textured_quad(vec2 position, vec2 size, float rotation, uint32_t texture_id);
 
 #endif // RENDERER_H
