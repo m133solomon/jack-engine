@@ -11,6 +11,17 @@ vertex_buffer create_vertex_buffer(const void *data, uint32_t size)
     return result;
 }
 
+vertex_buffer create_vertex_buffer_dynamic(uint32_t size)
+{
+    vertex_buffer result;
+
+    glGenBuffers(1, &result.renderer_id);
+    glBindBuffer(GL_ARRAY_BUFFER, result.renderer_id);
+    glBufferData(GL_ARRAY_BUFFER, size, NULL, GL_DYNAMIC_DRAW);
+
+    return result;
+}
+
 void vertex_buffer_bind(vertex_buffer *vb)
 {
     glBindBuffer(GL_ARRAY_BUFFER, vb->renderer_id);

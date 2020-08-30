@@ -1,10 +1,10 @@
 #include "vertex_array.h"
 
-vb_layout create_vb_layout()
+vb_layout create_vb_layout(uint32_t stride)
 {
     vb_layout result;
 
-    result.stride = 0;
+    result.stride = stride;
     result.elements = (vb_element*)malloc(1000 * sizeof(vb_layout));
     result.element_count = 0;
 
@@ -23,6 +23,14 @@ void vb_layout_push_uint(vb_layout *layout, uint32_t count)
     layout->elements[layout->element_count++] =
         (vb_element) { GL_UNSIGNED_INT, count, GL_FALSE };
     layout->stride += count * sizeof(GL_UNSIGNED_INT);
+}
+
+void vb_layout_push_element(vb_layout *layout, int index, const void* offset, vb_element element)
+{
+    glEnableVertexAttribArray(index);
+    glVertexAttribPointer(
+        index, element.count, element.type, element.normalized, layout->stride, offset
+    );
 }
 
 void vb_layout_delete(vb_layout *layout)

@@ -24,10 +24,6 @@ void renderer_translate(vec2 amount);
 void renderer_zoom(float amount);
 void renderer_rotate(float amount);
 
-// rotation in radians
-void renderer_draw_quad(vec2 translation, vec2 scale, float rotation, shader *sh);
-void renderer_fill_quad(vec4 color, vec2 translation, vec2 scale, float rotation);
-void renderer_textured_quad(texture *tex, vec4 tint, vec2 translation, vec2 scale, float rotation);
 void renderer_clean();
 
 // --- BATCH RENDERER ---

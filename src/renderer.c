@@ -16,11 +16,6 @@ typedef struct
 {
     j_vec2i render_size;
 
-    vertex_array quad_va;
-    index_buffer quad_ib;
-    shader quad_texture_shader;
-    shader quad_color_shader;
-
     mat4 projection_mat;
     mat4 view_mat;
 
@@ -31,52 +26,6 @@ typedef struct
 } j_renderer;
 
 j_renderer renderer_instance;
-
-static void init_quad_rendering()
-{
-    // declaring vertices for the quad
-    // containing positions and tex coords
-    float quad_vertices[] = {
-        -0.5f, -0.5f, 0.0f, 0.0f,
-         0.5f, -0.5f, 1.0f, 0.0f,
-         0.5f,  0.5f, 1.0f, 1.0f,
-        -0.5f,  0.5f, 0.0f, 1.0f
-    };
-
-    // declare the indices for the vertices
-    unsigned int quad_indices[] = {
-        0, 1, 2,
-        2, 3, 0
-    };
-
-    // create a vao to keep the state
-    // (vertex buffer, index buffer)
-    renderer_instance.quad_va = create_vertex_array();
-
-    vertex_buffer quad_vb = create_vertex_buffer(&quad_vertices, sizeof(quad_vertices));
-    vb_layout quad_layout = create_vb_layout();
-    vb_layout_push_float(&quad_layout, 2);
-    vb_layout_push_float(&quad_layout, 2);
-    vertex_array_add_buffer(&renderer_instance.quad_va, quad_vb, quad_layout);
-
-    renderer_instance.quad_ib = create_index_buffer(quad_indices, 6);
-
-    // TODO: move these shaders to a string
-    // make additional methods for loading
-    // shaders from strings or files
-
-    // create the texture shader for the quad
-    renderer_instance.quad_texture_shader = create_shader(
-        "src/shaders/texture.vert", "src/shaders/texture.frag"
-    );
-
-    // create the color shader
-    renderer_instance.quad_color_shader = create_shader(
-        "src/shaders/color.vert", "src/shaders/color.frag"
-    );
-
-    vb_layout_delete(&quad_layout);
-}
 
 void renderer_update_viewport(j_vec2i size)
 {
@@ -102,8 +51,6 @@ void renderer_init(j_vec2i size)
 
     // view matrix (camera)
     glm_mat4_identity(renderer_instance.view_mat);
-
-    init_quad_rendering();
 
     batch_renderer_init();
 }
@@ -160,54 +107,6 @@ float renderer_get_rotation()
     return renderer_instance.zoom_amount;
 }
 
-void renderer_draw_quad(vec2 translation, vec2 scale, float rotation, shader *sh)
-{
-    // crate the model matrix for this specific quad
-    mat4 model;
-    glm_mat4_identity(model);
-    glm_translate(model, (vec3) { translation[0], translation[1], 0.0f });
-    glm_scale(model, (vec3) { scale[0], scale[1], 1.0f });
-    glm_rotate_z(model, rotation, model);
-
-    // mvp -> MODEL VIEW PROJECTION
-    // the result from combining all the 3 matrices
-    mat4 mvp;
-    mat4 view_proj;
-    glm_mat4_mul(
-        renderer_instance.projection_mat, renderer_instance.view_mat, view_proj
-    );
-    glm_mat4_mul(view_proj, model, mvp);
-
-    // bind the shader and set the mvp
-    shader_bind(sh);
-    shader_set_uniform_mat4(sh, "u_MVP", mvp);
-
-    renderer_draw(&renderer_instance.quad_va, &renderer_instance.quad_ib, sh);
-}
-
-void renderer_fill_quad(vec4 color, vec2 translation, vec2 scale, float rotation)
-{
-    shader_bind(&renderer_instance.quad_color_shader);
-    shader_set_uniform_vec4(
-        &renderer_instance.quad_color_shader,
-        "u_Color", color
-    );
-
-    renderer_draw_quad(translation, scale, rotation, &renderer_instance.quad_color_shader);
-}
-
-void renderer_textured_quad(texture *tex, vec4 tint, vec2 translation, vec2 scale, float rotation)
-{
-    texture_bind(tex, 0);
-    shader_bind(&renderer_instance.quad_texture_shader);
-    shader_set_uniform1i(&renderer_instance.quad_texture_shader, "u_Texture", 0);
-    shader_set_uniform_vec4(
-        &renderer_instance.quad_texture_shader, "u_Color", tint
-    );
-
-    renderer_draw_quad(translation, scale, rotation, &renderer_instance.quad_texture_shader);
-}
-
 // --- BATCH RENDERER ---
 
 static const uint32_t MAX_QUAD_COUNT = 10000;
@@ -228,9 +127,9 @@ typedef struct
     vec3 quad_vertex_positions[4];
     vec2 quad_texture_coords[4];
 
-    GLuint quad_va;
-    GLuint quad_vb;
-    GLuint quad_ib;
+    vertex_array quad_va;
+    vertex_buffer quad_vb;
+    index_buffer quad_ib;
 
     shader quad_shader;
 
@@ -285,10 +184,6 @@ static void init_renderer_data()
         renderer_data.quad_texture_coords[3]
     );
 
-    renderer_data.quad_va = 0;
-    renderer_data.quad_vb = 0;
-    renderer_data.quad_ib = 0;
-
     renderer_data.quad_shader = create_shader(
         "src/shaders/batching.vert", "src/shaders/batching.frag"
     );
@@ -318,41 +213,37 @@ void batch_renderer_init()
 
     init_renderer_data();
 
-    glGenVertexArrays(1, &renderer_data.quad_va);
-    glBindVertexArray(renderer_data.quad_va);
+    renderer_data.quad_va = create_vertex_array();
 
-    glGenBuffers(1, &renderer_data.quad_vb);
-    glBindBuffer(GL_ARRAY_BUFFER, renderer_data.quad_vb);
-    glBufferData(
-        GL_ARRAY_BUFFER, MAX_VERTEX_COUNT * sizeof(vertex), NULL, GL_DYNAMIC_DRAW
+    renderer_data.quad_vb = create_vertex_buffer_dynamic(
+        MAX_VERTEX_COUNT * sizeof(vertex)
     );
 
-    glEnableVertexAttribArray(0);
-    /* glEnableVertexArrayAttrib(renderer_data.quad_va, 0); */
-    glVertexAttribPointer(
-        0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex),
-        (const void*)offsetof(vertex, position)
+    vb_layout quad_layout = create_vb_layout(sizeof(vertex));
+
+    vertex_array_bind(&renderer_data.quad_va);
+    vertex_buffer_bind(&renderer_data.quad_vb);
+
+    vb_element position_el = (vb_element) { GL_FLOAT, 3, GL_FALSE };
+    vb_element color_el = (vb_element) { GL_FLOAT, 4, GL_FALSE };
+    vb_element tex_coords_el = (vb_element) { GL_FLOAT, 2, GL_FALSE };
+    vb_element tex_index_el = (vb_element) { GL_FLOAT, 1, GL_FALSE };
+
+    vb_layout_push_element(
+        &quad_layout, 0, (const void*)offsetof(vertex, position), position_el
+    );
+    vb_layout_push_element(
+        &quad_layout, 1, (const void*)offsetof(vertex, color), color_el
+    );
+    vb_layout_push_element(
+        &quad_layout, 2, (const void*)offsetof(vertex, tex_coords), tex_coords_el
+    );
+    vb_layout_push_element(
+        &quad_layout, 3, (const void*)offsetof(vertex, tex_index), tex_index_el
     );
 
-    glEnableVertexAttribArray(1);
-    /* glEnableVertexArrayAttrib(renderer_data.quad_va, 1); */
-    glVertexAttribPointer(
-        1, 4, GL_FLOAT, GL_FALSE, sizeof(vertex),
-        (const void*)offsetof(vertex, color)
-    );
-
-    glEnableVertexAttribArray(2);
-    /* glEnableVertexArrayAttrib(renderer_data.quad_va, 2); */
-    glVertexAttribPointer(
-        2, 2, GL_FLOAT, GL_FALSE, sizeof(vertex),
-        (const void*)offsetof(vertex, tex_coords)
-    );
-
-    glEnableVertexAttribArray(3);
-    /* glEnableVertexArrayAttrib(renderer_data.quad_va, 3); */
-    glVertexAttribPointer(
-        3, 1, GL_FLOAT, GL_FALSE, sizeof(vertex),
-        (const void*)offsetof(vertex, tex_index)
+    vertex_array_add_buffer(
+        &renderer_data.quad_va, renderer_data.quad_vb, quad_layout
     );
 
     uint32_t indices[MAX_INDEX_COUNT];
@@ -370,9 +261,7 @@ void batch_renderer_init()
         offset += 4;
     }
 
-    glGenBuffers(1, &renderer_data.quad_ib);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer_data.quad_ib);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    renderer_data.quad_ib = create_index_buffer(indices, MAX_INDEX_COUNT);
 
     glGenTextures(1, &renderer_data.white_texture);
     glBindTexture(GL_TEXTURE_2D, renderer_data.white_texture);
@@ -395,11 +284,11 @@ void batch_renderer_init()
 
 static void batch_renderer_shutdown()
 {
-    glDeleteVertexArrays(1, &renderer_data.quad_va);
-    glDeleteBuffers(1, &renderer_data.quad_vb);
-    glDeleteBuffers(1, &renderer_data.quad_ib);
     glDeleteTextures(1, &renderer_data.white_texture);
 
+    vertex_array_delete(&renderer_data.quad_va);
+    vertex_buffer_delete(&renderer_data.quad_vb);
+    index_buffer_delete(&renderer_data.quad_ib);
     shader_delete(&renderer_data.quad_shader);
 
     free(renderer_data.texture_slots);
@@ -423,12 +312,11 @@ static void batch_renderer_flush()
 {
     for (uint32_t i = 0; i < renderer_data.texture_slot_index; i++)
     {
-       /* glBindTextureUnit(i, renderer_data.texture_slots[i]); */
         glActiveTexture(GL_TEXTURE0 + i);
         glBindTexture(GL_TEXTURE_2D, renderer_data.texture_slots[i]);
     }
 
-    glBindVertexArray(renderer_data.quad_va);
+    vertex_array_bind(&renderer_data.quad_va);
     glDrawElements(GL_TRIANGLES, renderer_data.index_count, GL_UNSIGNED_INT, NULL);
 
     renderer_data.index_count = 0;
@@ -440,7 +328,7 @@ void batch_renderer_end()
 {
     GLsizeiptr size = (uint8_t*)renderer_data.quad_buffer_ptr - (uint8_t*)renderer_data.quad_buffer;
 
-    glBindBuffer(GL_ARRAY_BUFFER, renderer_data.quad_vb);
+    vertex_buffer_bind(&renderer_data.quad_vb);
     glBufferSubData(GL_ARRAY_BUFFER, 0, size, renderer_data.quad_buffer);
 
     batch_renderer_flush();
@@ -526,10 +414,6 @@ void batch_renderer_textured_quad(vec2 position, vec2 size, float rotation, text
 
 void renderer_clean()
 {
-    shader_delete(&renderer_instance.quad_color_shader);
-    shader_delete(&renderer_instance.quad_texture_shader);
-    vertex_array_delete(&renderer_instance.quad_va);
-    index_buffer_delete(&renderer_instance.quad_ib);
     batch_renderer_shutdown();
 }
 

@@ -27,6 +27,8 @@ typedef struct
 vb_layout create_vb_layout();
 void vb_layout_push_float(vb_layout *layout, uint32_t count);
 void vb_layout_push_uint(vb_layout *layout, uint32_t count);
+void vb_layout_push_element(vb_layout *layout, int index, const void* offset, vb_element element);
+
 void vb_layout_delete(vb_layout *layout);
 
 typedef struct {
