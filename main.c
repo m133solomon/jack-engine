@@ -17,27 +17,11 @@ int main()
 
 texture t;
 
-int count = 10;
-float positions[10][2];
-
-void init_batch();
-void draw_batch();
-
 void init()
 {
     j_set_window_size(800, 600);
 
     t = create_texture("textures/avatar.png");
-
-    j_vec2i wsize = j_get_window_size();
-
-    for (int i = 0; i < count; i++)
-    {
-        positions[i][0] = j_rand_int(100, wsize.x);
-        positions[i][1] = j_rand_int(100, wsize.y);
-    }
-
-    init_batch();
 }
 
 void camera_controller(float delta_time)
@@ -70,6 +54,15 @@ void camera_controller(float delta_time)
     {
         renderer_zoom(1.01);
     }
+
+    if (j_is_key_down(GLFW_KEY_R))
+    {
+        renderer_rotate(0.01f);
+    }
+    else if (j_is_key_down(GLFW_KEY_F))
+    {
+        renderer_rotate(-0.01f);
+    }
 }
 
 int quadCount = 0;
@@ -79,41 +72,24 @@ void loop(float delta_time)
 
     camera_controller(delta_time);
 
-    /* renderer_fill_quad( */
-        /* (vec4) { 1.0f, 1.0f, 0.0f, 1.0f }, */
-        /* (vec2) { 0.0f, 0.0f }, (vec2) { 20.0f, 20.0f }, 0 */
-    /* ); */
+    quadCount = 0;
 
-    draw_batch();
+    batch_renderer_begin();
+    int t_indx = 0;
+    for (float y = -2000.0f; y < 2000.0f; y += 30.0f)
+    {
+        for (float x = -2000.0f; x < 2000.0f; x += 30.0f)
+        {
+            quadCount++;
+            vec4 color = (vec4) { (x + 2000) / 4000, 0.2f, (y + 2000) / 4000, 1.0f };
+            /* batch_renderer_fill_quad((vec2) { x, y }, (vec2) { 15.0f, 15.0f }, 0, color); */
+            batch_renderer_textured_quad((vec2) { x, y }, (vec2) { 30.0f, 30.0f }, 0.0f, t);
+        }
+    }
+    batch_renderer_end();
 
     char title[42];
     int fps = 1 / delta_time;
     sprintf(title, "%d - Quads: %d", fps, quadCount);
     j_set_window_title(title);
-}
-
-shader batch_sh;
-void init_batch()
-{
-
-}
-
-void draw_batch()
-{
-    quadCount = 0;
-
-    batch_renderer_begin();
-    int t_indx = 0;
-    for (float y = -2000.0f; y < 2000.0f; y += 18.0f)
-    {
-        for (float x = -2000.0f; x < 2000.0f; x += 18.0f)
-        {
-            quadCount++;
-            vec4 color = (vec4) { (x + 2000) / 4000, 0.2f, (y + 2000) / 4000, 1.0f };
-            batch_renderer_fill_quad((vec2) { x, y }, (vec2) { 15.0f, 15.0f }, 0, color);
-            /* batch_renderer_textured_quad((vec2) { x, y }, (vec2) { 30.0f, 30.0f }, 0.0f, t.renderer_id); */
-        }
-    }
-
-    batch_renderer_end();
 }

@@ -16,8 +16,13 @@ void renderer_update_viewport(j_vec2i size);
 void renderer_init(j_vec2i size);
 void renderer_draw(vertex_array *va, index_buffer *ib, shader *sh);
 
+j_vec2f renderer_get_translation();
+float renderer_get_zoom_amount();
+float renderer_get_rotation();
+
 void renderer_translate(vec2 amount);
 void renderer_zoom(float amount);
+void renderer_rotate(float amount);
 
 // rotation in radians
 void renderer_draw_quad(vec2 translation, vec2 scale, float rotation, shader *sh);
@@ -33,6 +38,6 @@ void batch_renderer_begin();
 void batch_renderer_end();
 
 void batch_renderer_fill_quad(vec2 position, vec2 size, float rotation, vec4 color);
-void batch_renderer_textured_quad(vec2 position, vec2 size, float rotation, uint32_t texture_id);
+void batch_renderer_textured_quad(vec2 position, vec2 size, float rotation, texture texture);
 
 #endif // RENDERER_H

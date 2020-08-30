@@ -23,6 +23,11 @@ typedef struct
 
     mat4 projection_mat;
     mat4 view_mat;
+
+    j_vec2f translation;
+    float zoom_amount;
+    // radians
+    float rotation;
 } j_renderer;
 
 j_renderer renderer_instance;
@@ -76,10 +81,12 @@ static void init_quad_rendering()
 void renderer_update_viewport(j_vec2i size)
 {
     renderer_instance.render_size = size;
-    // setup projection matrix
+
     glm_ortho(
-        0.0f, size.x,
-        0.0f, size.y,
+        -size.x / 2 * renderer_instance.zoom_amount,
+        size.x / 2 * renderer_instance.zoom_amount,
+        -size.y / 2 * renderer_instance.zoom_amount,
+        size.y / 2 * renderer_instance.zoom_amount,
         -1.0f, 1.0f,
        renderer_instance.projection_mat
     );
@@ -87,6 +94,10 @@ void renderer_update_viewport(j_vec2i size)
 
 void renderer_init(j_vec2i size)
 {
+    renderer_instance.translation = (j_vec2f) { 0.0f, 0.0f };
+    renderer_instance.zoom_amount = 1.0f;
+    renderer_instance.rotation = 0;
+
     renderer_update_viewport(size);
 
     // view matrix (camera)
@@ -107,25 +118,46 @@ void renderer_draw(vertex_array *va, index_buffer *ib, shader *sh)
 
 void renderer_translate(vec2 amount)
 {
+    renderer_instance.translation = j_vec2f_add(
+        renderer_instance.translation,
+        (j_vec2f) { amount[0], amount[1] }
+    );
+
     glm_translate(
         renderer_instance.view_mat, (vec3) { amount[0], amount[1], 0.0f }
     );
 }
 
-// TODO: make this use othoprojection
-// add another field to renderer_instance called zoom amount
-// multiply ortho width and height with that
+// this multiplies the zoom amount
 void renderer_zoom(float amount)
 {
-    vec2 center = (vec2) {
-        renderer_instance.render_size.x / 2,
-        renderer_instance.render_size.y / 2
-    };
+    renderer_instance.zoom_amount *= amount;
+    renderer_update_viewport(renderer_instance.render_size);
+}
 
-    glm_scale(
-        renderer_instance.view_mat,
-        (vec3) { amount, amount, 1.0f }
+// TODO: fix this ortho rotation shit
+void renderer_rotate(float amount)
+{
+    renderer_instance.rotation += amount;
+    glm_rotate_z(
+        renderer_instance.view_mat, amount, renderer_instance.view_mat
     );
+    renderer_update_viewport(renderer_instance.render_size);
+}
+
+j_vec2f renderer_get_translation()
+{
+    return renderer_instance.translation;
+}
+
+float renderer_get_zoom_amount()
+{
+    return renderer_instance.zoom_amount;
+}
+
+float renderer_get_rotation()
+{
+    return renderer_instance.zoom_amount;
 }
 
 void renderer_draw_quad(vec2 translation, vec2 scale, float rotation, shader *sh)
@@ -455,8 +487,10 @@ void batch_renderer_fill_quad(vec2 position, vec2 size, float rotation, vec4 col
     batch_renderer_bind_data(position, size, rotation, color, texture_index);
 }
 
-void batch_renderer_textured_quad(vec2 position, vec2 size, float rotation, uint32_t texture_id)
+void batch_renderer_textured_quad(vec2 position, vec2 size, float rotation, texture texture)
 {
+    float texture_id = texture.renderer_id;
+
     if (
         renderer_data.index_count >= MAX_INDEX_COUNT ||
         renderer_data.texture_slot_index > MAX_TEXTURES - 1

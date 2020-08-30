@@ -1,6 +1,16 @@
 #include "math.h"
 #include <stdlib.h>
 
+j_vec2i j_vec2i_add(j_vec2i a, j_vec2i b)
+{
+    return (j_vec2i) { a.x + a.x, a.y + a.y };
+}
+
+j_vec2f j_vec2f_add(j_vec2f a, j_vec2f b)
+{
+    return (j_vec2f) { a.x + a.x, a.y + a.y };
+}
+
 int j_rand_int(const int min_num, const int max_num)
 {
     int result = 0, low_num = 0, hi_num = 0;
