@@ -12,6 +12,19 @@
  *    stupid dog
  */
 
+typedef struct
+{
+    j_vec2i render_size;
+
+    vertex_array quad_va;
+    index_buffer quad_ib;
+    shader quad_texture_shader;
+    shader quad_color_shader;
+
+    mat4 projection_mat;
+    mat4 view_mat;
+} j_renderer;
+
 j_renderer renderer_instance;
 
 static void init_quad_rendering()
@@ -187,6 +200,8 @@ typedef struct
     GLuint quad_vb;
     GLuint quad_ib;
 
+    shader quad_shader;
+
     GLuint white_texture;
     uint32_t white_texture_slot;
 
@@ -241,6 +256,19 @@ static void init_renderer_data()
     renderer_data.quad_va = 0;
     renderer_data.quad_vb = 0;
     renderer_data.quad_ib = 0;
+
+    renderer_data.quad_shader = create_shader(
+        "src/shaders/batching.vert", "src/shaders/batching.frag"
+    );
+
+    shader_bind(&renderer_data.quad_shader);
+    int samplers[16];
+    for (int i = 0; i < 16; i++)
+    {
+        samplers[i] = i;
+    }
+    shader_set_uniform_1iv(&renderer_data.quad_shader, "u_Textures", 16, samplers);
+
     renderer_data.white_texture = 0;
     renderer_data.white_texture_slot = 0;
 
@@ -333,12 +361,14 @@ void batch_renderer_init()
     }
 }
 
-void batch_renderer_shutdown()
+static void batch_renderer_shutdown()
 {
     glDeleteVertexArrays(1, &renderer_data.quad_va);
     glDeleteBuffers(1, &renderer_data.quad_vb);
     glDeleteBuffers(1, &renderer_data.quad_ib);
     glDeleteTextures(1, &renderer_data.white_texture);
+
+    shader_delete(&renderer_data.quad_shader);
 
     free(renderer_data.texture_slots);
     free(renderer_data.quad_buffer);
@@ -346,18 +376,18 @@ void batch_renderer_shutdown()
 
 void batch_renderer_begin()
 {
+    mat4 view_proj;
+    glm_mat4_mul(
+        renderer_instance.projection_mat, renderer_instance.view_mat, view_proj
+    );
+
+    shader_bind(&renderer_data.quad_shader);
+    shader_set_uniform_mat4(&renderer_data.quad_shader, "u_ViewProj", view_proj);
+
     renderer_data.quad_buffer_ptr = renderer_data.quad_buffer;
 }
 
-void batch_renderer_end()
-{
-    GLsizeiptr size = (uint8_t*)renderer_data.quad_buffer_ptr - (uint8_t*)renderer_data.quad_buffer;
-
-    glBindBuffer(GL_ARRAY_BUFFER, renderer_data.quad_vb);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, size, renderer_data.quad_buffer);
-}
-
-void batch_renderer_flush()
+static void batch_renderer_flush()
 {
     for (uint32_t i = 0; i < renderer_data.texture_slot_index; i++)
     {
@@ -371,6 +401,17 @@ void batch_renderer_flush()
 
     renderer_data.index_count = 0;
     renderer_data.texture_slot_index = 1;
+}
+
+
+void batch_renderer_end()
+{
+    GLsizeiptr size = (uint8_t*)renderer_data.quad_buffer_ptr - (uint8_t*)renderer_data.quad_buffer;
+
+    glBindBuffer(GL_ARRAY_BUFFER, renderer_data.quad_vb);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, size, renderer_data.quad_buffer);
+
+    batch_renderer_flush();
 }
 
 static void batch_renderer_bind_data(vec2 position, vec2 size, float rotation, vec4 color, float texture_index)

@@ -96,41 +96,24 @@ shader batch_sh;
 void init_batch()
 {
 
-    batch_sh = create_shader("src/shaders/batching.vert", "src/shaders/batching.frag");
-    shader_bind(&batch_sh);
-    int samplers[16];
-    for (int i = 0; i < 16; i++)
-    {
-        samplers[i] = i;
-    }
-    shader_set_uniform_1iv(&batch_sh, "u_Textures", 16, samplers);
 }
 
 void draw_batch()
 {
-    mat4 view_proj;
-    glm_mat4_mul(
-        renderer_instance.projection_mat, renderer_instance.view_mat, view_proj
-    );
-
-    shader_bind(&batch_sh);
-    shader_set_uniform_mat4(&batch_sh, "u_ViewProj", view_proj);
-    batch_renderer_begin();
-
     quadCount = 0;
 
+    batch_renderer_begin();
     int t_indx = 0;
-    for (float y = -2000.0f; y < 2000.0f; y += 30.0f)
+    for (float y = -2000.0f; y < 2000.0f; y += 18.0f)
     {
-        for (float x = -2000.0f; x < 2000.0f; x += 30.0f)
+        for (float x = -2000.0f; x < 2000.0f; x += 18.0f)
         {
             quadCount++;
             vec4 color = (vec4) { (x + 2000) / 4000, 0.2f, (y + 2000) / 4000, 1.0f };
-            /* batch_renderer_fill_quad((vec2) { x, y }, (vec2) { 30.0f, 30.0f }, 0, color); */
-            batch_renderer_textured_quad((vec2) { x, y }, (vec2) { 30.0f, 30.0f }, 0.0f, t.renderer_id);
+            batch_renderer_fill_quad((vec2) { x, y }, (vec2) { 15.0f, 15.0f }, 0, color);
+            /* batch_renderer_textured_quad((vec2) { x, y }, (vec2) { 30.0f, 30.0f }, 0.0f, t.renderer_id); */
         }
     }
 
     batch_renderer_end();
-    batch_renderer_flush();
 }

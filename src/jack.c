@@ -3,6 +3,21 @@
 #include "renderer.h"
 #include <time.h>
 
+typedef struct
+{
+    GLFWwindow *window;
+    char *window_title;
+    j_vec2i window_size;
+    bool window_vsync;
+    void (*key_callback)(int key);
+
+    // used for delta time
+    double current_time;
+    double last_time;
+} j_app;
+
+j_app j_instance;
+
 static void glfw_error_callback(int error, const char *description)
 {
     LOG_ERROR("OpenGL Error: %s", description);
@@ -22,13 +37,6 @@ static void glfw_resize_callback(GLFWwindow *window, int width, int height)
     j_instance.window_size = new_size;
     renderer_update_viewport(new_size);
 }
-
-// need to declare variable in this scope too
-// otherwise this file will have it's own version
-// of j_instance
-// that's why we declare j_instance
-// as extern in jack.h
-j_app j_instance;
 
 bool j_init()
 {

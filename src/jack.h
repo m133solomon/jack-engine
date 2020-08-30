@@ -12,23 +12,6 @@
 #include "color.h"
 #include "math.h"
 
-typedef struct
-{
-    GLFWwindow *window;
-    char *window_title;
-    j_vec2i window_size;
-    bool window_vsync;
-    void (*key_callback)(int key);
-
-    // used for delta time
-    double current_time;
-    double last_time;
-} j_app;
-
-// declare this as extern so
-// otherfile can forward declare it
-extern j_app j_instance;
-
 bool j_init();
 
 void j_set_vsync(bool value);
@@ -38,8 +21,6 @@ char* j_get_window_title();
 
 void j_set_window_size(uint32_t w, uint32_t h);
 j_vec2i j_get_window_size();
-
-static void j_clean();
 
 void j_clear(j_color clear_color);
 
